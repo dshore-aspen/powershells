@@ -13,10 +13,10 @@ if (Get-ChildItem -Path $searchFolder -Filter $fileName -Recurse)
     Start-Process -Wait -FilePath $cleanerOUT -Argument "/S" -PassThru
     sleep 20
 
-    if (Get-ChildItem -Path $searchFolder -Filter $fileName -Recurse)
+    if (Get-ChildItem -Path 'C:\Program Files (x86)\*' -Filter $fileName -Recurse)
     {
         Write-Output "[CHECK]---Post uninstall, Zoom still present."
-#       exit 1
+       exit 1
     } else {
         Write-Output "[CHECK]---Post uninstall, Zoom gone. Installing now."
     }
@@ -33,10 +33,10 @@ if (Get-ChildItem -Path $searchFolder -Filter $fileName -Recurse)
     Write-Output "[SUCCESS]---Zoom present after the uninstall."
     Remove-Item -Path $cleanerOUT
     Remove-Item -Path $installerOUT
-#   exit 0
+   exit 0
 } else {
     Write-Output "[FAILURE]---Zoom did not install after the uninstall."
     Remove-Item -Path $cleanerOUT
     Remove-Item -Path $installerOUT
-#   exit 1
+   exit 1
 }
