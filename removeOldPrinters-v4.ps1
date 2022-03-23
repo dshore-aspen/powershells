@@ -9,7 +9,7 @@ Function LogWrite
 
 $printerList = "Aspen-Copiers-SecurePrint", "ASPEN-Copiers-SecurePrintNew", "ASPEN-Printers-SecurePrint", "DC_Printers", "DC_Copiers", "Aspen-Copiers-SecurePrint", "ASPEN-Printers-SecurePrintNew"
 
-
+LogWrite "XXXXXXXXXXXXXXXXXXXX --- Printer check starting"
 
 foreach ($printer in $printerList) {
     LogWrite "Checking for $printer"
@@ -24,3 +24,5 @@ foreach ($printer in $printerList) {
         LogWrite "$printer not present."
     }
 }
+
+LogWrite "XXXXXXXXXXXXXXXXXXXX --- Printer check done"
