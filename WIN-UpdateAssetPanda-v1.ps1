@@ -1,39 +1,64 @@
-﻿$serviceTag=$(Get-WmiObject win32_computersystemproduct).IdentifyingNumber
+﻿# First collect the info we need from the computer
+$serviceTag=$(Get-WmiObject win32_computersystemproduct).IdentifyingNumber
 $userName=$env:USERNAME
+$ethernetMAC=(Get-NetAdapter -Name Ethernet* -Physical).MacAddress
+$wifiMAC=(Get-NetAdapter -Name Wi-Fi -Physical).MacAddress
+$osVersion="Windows v" + (Get-CimInstance Win32_OperatingSystem).Version
+$model=(gwmi win32_computersystem).Model
+$computerName=$env:COMPUTERNAME
 
 
+# Then create the API functions. This is really just to make typing the functions faster and easier to update when AssetPanda updates their APIs
 Function API_CALL_V3
 {
-   Param ([string]$call, [string]$method)
+   Param ([string]$call, [string]$method, $body)
    $api = "https://api.assetpanda.com/v3/" + $call
    Invoke-RestMethod $api -Method $method -Headers $headers -Body $body
 }
 
 Function API_CALL_V2
 {
-   Param ([string]$call, [string]$method)
+   Param ([string]$call, [string]$method, $body)
    $api = "https://api.assetpanda.com:443/v2/" + $call
    Invoke-RestMethod $api -Method $method -Headers $headers -Body $body
 }
 
 
+# Now build the API header
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("Authorization", "Bearer [INSERT TOKEN HERE]")
 $headers.Add("Content-Type", "application/json")
-$apiV3_URI="https://api.assetpanda.com/v3"
-$body = "{
+
+# First need to create the body for searching for the device
+$bodySearch = "{
 `n    `"field_filters`": {
 `n        `"field_1`": `"GLBT3Z2`"
 `n    }
 `n}"
 
-$response = API_CALL_V3 '/groups/82676/search/objects' 'POST'
-# $response = Invoke-RestMethod $apiV3_URI'/groups/82676/search/objects' -Method 'POST' -Headers $headers -Body $body # | ConvertTo-Json
+
+# Now send the call to AssetPanda to collect the unique ID for the asset you want to update and store that in $entity_object_id
+$response = API_CALL_V3 '/groups/82676/search/objects' 'POST' $bodySearch
 $entity_object_id=$response.objects.id
 
-$body = "{
+
+# Now store all that data in a JSON to push to AssetPanda in an action call that will update the asset
+$bodyUpdate = $("{
         `"embedded_into_object_id`": `"`",
         `"action_fields`": {
-          `"field_1`": "$userName"
+          `"field_1`": `"$userName`",
+          `"field_2`": `"$osVersion`",
+          `"field_3`": `"$wifiMAC`",
+          `"field_4`": `"$model`",
+          `"field_5`": `"$ethernetMAC`",
+          `"field_6`": `"$computerName`"
         }
-}"
+}")
+
+$apiCall = "https://api.assetpanda.com:443/v2/entity_objects/" + $entity_object_id + "/action_objects/267839"
+
+
+# Here's the call to update the asset
+Invoke-WebRequest $apiCall -Method POST -Headers $headers -Body $bodyUpdate
+
+
