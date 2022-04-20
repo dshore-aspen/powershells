@@ -4,8 +4,10 @@ $userName=((Get-WMIObject -class Win32_ComputerSystem | select username).usernam
 $ethernetMAC=(Get-NetAdapter -Name Ethernet* -Physical).MacAddress
 $wifiMAC=(Get-NetAdapter -Name Wi-Fi -Physical).MacAddress
 $osVersion="Windows v" + (Get-CimInstance Win32_OperatingSystem).Version
+$manufacturer=(gwmi win32_computersystem).Manufacturer
 $model=(gwmi win32_computersystem).Model
 $computerName=$env:COMPUTERNAME
+$processor=(Get-WmiObject Win32_Processor).Name
 
 
 # Then create the API functions. This is really just to make typing the functions faster and easier to update when AssetPanda updates their APIs
@@ -51,7 +53,9 @@ $bodyUpdate = $("{
           `"field_3`": `"$wifiMAC`",
           `"field_4`": `"$model`",
           `"field_5`": `"$ethernetMAC`",
-          `"field_6`": `"$computerName`"
+          `"field_6`": `"$computerName`",
+          `"field_7`": `"$processor`",
+          `"field_8`": `"$manufacturer`"
         }
 }")
 
