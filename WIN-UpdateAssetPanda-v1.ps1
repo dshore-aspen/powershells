@@ -1,6 +1,6 @@
 ﻿# First collect the info we need from the computer
 $serviceTag=$(Get-WmiObject win32_computersystemproduct).IdentifyingNumber
-$userName=$env:USERNAME
+$userName=((Get-WMIObject -class Win32_ComputerSystem | select username).username).TrimStart("ASPEN_INST\")
 $ethernetMAC=(Get-NetAdapter -Name Ethernet* -Physical).MacAddress
 $wifiMAC=(Get-NetAdapter -Name Wi-Fi -Physical).MacAddress
 $osVersion="Windows v" + (Get-CimInstance Win32_OperatingSystem).Version
@@ -32,7 +32,7 @@ $headers.Add("Content-Type", "application/json")
 # First need to create the body for searching for the device
 $bodySearch = "{
 `n    `"field_filters`": {
-`n        `"field_1`": `"GLBT3Z2`"
+`n        `"field_1`": `"$serviceTag`"
 `n    }
 `n}"
 
