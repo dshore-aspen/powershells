@@ -1,11 +1,17 @@
 ﻿# First collect the info we need from the computer
 $serviceTag=$(Get-WmiObject win32_computersystemproduct).IdentifyingNumber
-$userName=((Get-WMIObject -class Win32_ComputerSystem | select username).username).TrimStart("ASPEN_INST\")
-$ethernetMAC=(Get-NetAdapter -Name Ethernet* -Physical).MacAddress
+$userName=((Get-WMIObject -class Win32_ComputerSystem | Select-Object username).username).TrimStart("ASPEN_INST\")
+
+if ((Get-NetAdapter -Name Ethernet* -Physical).MacAddress)
+    {$ethernetMAC=(Get-NetAdapter -Name Ethernet* -Physical).MacAddress}
+    else 
+        {$ethernetMAC="No Ethernet MAC"}
+        
+
 $wifiMAC=(Get-NetAdapter -Name Wi-Fi -Physical).MacAddress
 $osVersion="Windows v" + (Get-CimInstance Win32_OperatingSystem).Version
-$manufacturer=(gwmi win32_computersystem).Manufacturer
-$model=(gwmi win32_computersystem).Model
+$manufacturer=(Get-WMIObject win32_computersystem).Manufacturer
+$model=(Get-WMIObject win32_computersystem).Model
 $computerName=$env:COMPUTERNAME
 $processor=(Get-WmiObject Win32_Processor).Name
 
