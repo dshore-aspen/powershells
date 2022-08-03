@@ -72,9 +72,6 @@ $apiCall = "https://api.assetpanda.com:443/v2/entity_objects/" + $entity_object_
 Invoke-WebRequest $apiCall -Method POST -Headers $headers -Body $bodyUpdate
 
 #  For reporting purposes, spit out all the data collected here:
-
-Write-Host "The following lines are an output of the data collected and shared with AssetPanda."
-Write-Host "----"
 $userName
 $osVersion
 $wifiMAC
