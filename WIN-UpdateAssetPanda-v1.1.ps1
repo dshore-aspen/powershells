@@ -34,7 +34,7 @@ Function API_CALL_V2
 
 # Now build the API header
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("Authorization", "Bearer 0a07cf70b24def9acbad474ecf4e78d02cd85c64966ab6fc1e3323e4f28703aa")
+$headers.Add("Authorization", "Bearer [INSERT TOKEN HERE]")
 $headers.Add("Content-Type", "application/json")
 
 # First need to create the body for searching for the device
