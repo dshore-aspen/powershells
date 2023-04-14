@@ -11,6 +11,9 @@ $Value = '0'
 
 # Variables for the Script Schedule
 $ScriptLocation = $MyInvocation.MyCommand.Path
+Move-Item -Path $ScriptLocation -Destination "C:\GreenEthernetScript\"
+$ScriptLocation = $MyInvocation.MyCommand.Path
+
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -argument $ScriptLocation 
 $trigger = New-ScheduledTaskTrigger -AtLogOn
 $schedulSettings = New-ScheduledTaskSettingsSet -RestartCount 6 -RestartInterval (New-TimeSpan -Minutes 15) -ExecutionTimeLimit (New-TimeSpan -Seconds 30) # -DeleteExpiredTaskAfter (New-TimeSpan -Days 30)
@@ -27,7 +30,7 @@ $AdapterTest = Get-NetAdapterAdvancedProperty -DisplayName $AdapterList | Where-
 If ( (Test-Path $RegistryPath)) {
     Write-Output "RegItem found. Configuration already complete. Disabling script scheduler."
     Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false
-    Remove-Item $ScriptLocation
+    Get-ChildItem C:\GreenEthernetScript -Recurse | Remove-Item
     exit 0
 } 
 
@@ -53,7 +56,7 @@ try {
     New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType DWORD
     Write-Output "Registry path entry updated. Disabling script schedule."           
     Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false
-    Remove-Item $ScriptLocation
+    Get-ChildItem C:\GreenEthernetScript -Recurse | Remove-Item
     exit 0
 
 } catch {
