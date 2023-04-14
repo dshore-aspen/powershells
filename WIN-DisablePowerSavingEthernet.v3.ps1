@@ -1,7 +1,7 @@
 ﻿# This script is designed to check if the energy efficiency related settings are enabled on a PC.
 # First it checks for a RegEdit entry used to determine if the script has run.
 # Then it check if the settings are available to manipulate.
-# Then it updates the settings and updates RegEdit so the next time it runs it can quickly cancel out.
+# Then it updates the settings and updates RegEdit so the next time it runs it can quickly cancel out and delete itself.
 
 # Variables for the RegItem check
 $RegistryPath = 'HKCU:\Environment\GreenEthernetStatus\'
@@ -27,7 +27,7 @@ $AdapterTest = Get-NetAdapterAdvancedProperty -DisplayName $AdapterList | Where-
 If ( (Test-Path $RegistryPath)) {
     Write-Output "RegItem found. Configuration already complete. Disabling script scheduler."
     Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false
-    break
+    Remove-Item $ScriptLocation
     exit 0
 } 
 
@@ -40,7 +40,6 @@ if  ($AdapterTest)
     Set-NetAdapterAdvancedProperty -DisplayName $AdapterList -DisplayValue "Disabled" -ErrorAction SilentlyContinue
     if ((Get-NetAdapterAdvancedProperty -DisplayName $AdapterList | Where-Object -FilterScript { $_.DisplayValue -eq "Enabled" })::IsNullOrEmpty){
         Write-Output "Setting update did not work. Exiting script with error and will try again next time."
-        break
         exit 1
     }
 }
@@ -54,13 +53,12 @@ try {
     New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType DWORD
     Write-Output "Registry path entry updated. Disabling script schedule."           
     Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false
-    break
+    Remove-Item $ScriptLocation
     exit 0
 
 } catch {
 
 # Unable to create the RegItem, leaving schedule intact.
     Write-Output "Registry path entry update failed. Leaving script schedule intact. Exiting with error."
-    break
     exit 1
 }
