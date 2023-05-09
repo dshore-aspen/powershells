@@ -21,11 +21,14 @@ if ( !(Get-EventLog -LogName Application -Source "GreenEthernetScript") ){
 
 # Copy the script to C: for the TaskScheduler and easy access
 $ScriptLocation = $MyInvocation.MyCommand.Path
-New-Item -Path "C:\GreenEthernetScript" -ItemType Directory
+Write-Output $ScriptLocation
+Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "Script location: $ScriptLocation"
+New-Item -Path "C:\GreenEthernetScript" -ItemType Directory -ErrorAction Continue
 Copy-Item -Path $ScriptLocation -Destination "C:\GreenEthernetScript\GreenEthernetScript.ps1"
 $ScriptLocation = "C:\GreenEthernetScript\"
 
-If ( $ScriptLocation -eq "C:\GreenEthernetScript\") {
+
+If ( Test-Path "C:\GreenEthernetScript\GreenEthernetScript.ps1" -PathType Any) {
 Write-Output "Script copied successfully"
 Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "Script copied successfully"
 } else {
