@@ -1,7 +1,14 @@
-# This script is designed to check if the energy efficiency related settings are enabled on a PC.
+﻿# This script is designed to check if the energy efficiency related settings are enabled on a PC.
 # First it checks for a RegEdit entry used to determine if the script has run.
 # Then it check if the settings are available to manipulate.
 # Then it updates the settings and updates RegEdit so the next time it runs it can quickly cancel out and delete itself.
+
+# RegItem Status meanings:
+# 0 = Script has run, but only created the RegItem
+# 1 = The script has been copied to C: and is ready to run again if needed.
+# 2 = The RealTEK drivers are not present, and so the script must exit and wait to run again from the scheduler.
+# 3 = The RealTEK drivers have been detected, but the changes have not happened yet.
+# 4 = The RealTEK drivers have been detected, and the drivers were updated. Work is complete and the script can self-destruct.
 
 # Variables for the RegItem check
 $RegistryPath = 'HKCU:\Environment\GreenEthernetStatus\'
@@ -72,6 +79,10 @@ Register-ScheduledTask UpdateGreenEthernet01 -InputObject $ST -ErrorAction Silen
 If ( Get-ScheduledTask -TaskName UpdateGreenEthernet01 ) {
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "Task scheduled successfully"
     Set-ItemProperty -Path $RegistryPath -Name $Name -Value 2
+} else {
+	Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "Task not scheduled successfully. Exiting with error."
+    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 1
+    exit 1
 }
 
 
@@ -89,7 +100,6 @@ if ( Get-NetAdapterAdvancedProperty -DisplayName $AdapterList ) {
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "Dock not plugged in, exiting script until next scheduled run."
     exit 0
 }
-break
 
 try {
     $AdapterTest = Get-NetAdapterAdvancedProperty -DisplayName $AdapterList | Where-Object -FilterScript { $_.DisplayValue -eq "Enabled" } -ErrorAction Stop
@@ -110,16 +120,13 @@ if  (!$AdapterTest -eq "")
     if ((Get-NetAdapterAdvancedProperty -DisplayName $AdapterList | Where-Object -FilterScript { $_.DisplayValue -eq "Enabled" })::IsNullOrEmpty){
         Write-Output "Setting update did not work. Exiting script with error and will try again next time."
         Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "Setting update did not work. Exiting script with error and will try again next time."
-        exit 1
+        exit 0
     }
 }
 
 Write-Output "Configs in place. Disabling script schedule and updating RegItem."
 Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "Configs in place. Disabling script schedule and updating RegItem."
 Set-ItemProperty -Path $RegistryPath -Name $Name -Value 4
-
-
-break
 
 
 # All checks passed, writing the RegItem. If that succeeds, deleting script schedule.
@@ -139,7 +146,6 @@ try {
 # Unable to create the RegItem, leaving schedule intact.
     Write-Output "Registry path entry update failed. Leaving script schedule intact. Exiting with error."
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "Registry path entry update failed. Leaving script schedule intact. Exiting with error." 
-    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 2
     exit 1
 }
 
