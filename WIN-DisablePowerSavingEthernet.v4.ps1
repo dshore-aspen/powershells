@@ -1,4 +1,4 @@
-# Version 4.3
+# Version 4.4
 # This script is designed to check if the energy efficiency related settings are enabled on a PC.
 # First it checks for a RegEdit entry used to determine if the script has run.
 # Then it check if the settings are available to manipulate.
@@ -78,7 +78,7 @@ $trigger += New-ScheduledTaskTrigger -AtLogOn -RandomDelay (New-TimeSpan -Second
 $trigger += New-ScheduledTaskTrigger -AtStartup -RandomDelay (New-TimeSpan -Minutes 10)
 $schedulSettings = New-ScheduledTaskSettingsSet -RestartCount 6 -RestartInterval (New-TimeSpan -Minutes 5) -ExecutionTimeLimit (New-TimeSpan -Seconds 30)
 $ST = New-ScheduledTask -Action $action -Trigger $trigger -Settings $schedulSettings
-Register-ScheduledTask UpdateGreenEthernet01 -InputObject $ST -ErrorAction SilentlyContinue
+Register-ScheduledTask UpdateGreenEthernet01 -InputObject $ST -Force -ErrorAction SilentlyContinue
 
 
 
