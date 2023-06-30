@@ -1,4 +1,4 @@
-# Version 4.7
+# Version 4.8
 # This script is designed to check if the energy efficiency related settings are enabled on a PC.
 # First it checks for a RegEdit entry used to determine if the script has run.
 # Then it check if the settings are available to manipulate.
@@ -28,7 +28,7 @@ If ( ( (Get-ItemProperty -Path $RegistryPath -Name -$Name -ErrorAction SilentlyC
     Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false
     Get-ChildItem $ScriptLocation -Recurse | Remove-Item
     Remove-Item $ScriptLocation
-    exit 0
+    exit
 } 
 
 
@@ -97,7 +97,7 @@ if ( Get-NetAdapterAdvancedProperty -DisplayName $AdapterList ) {
 } else {
     Set-ItemProperty -Path $RegistryPath -Name $Name -Value 1 -ErrorAction SilentlyContinue
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Warning -Message "User: $env:USERNAME -- Dock not plugged in, exiting script until next scheduled run."
-    exit 0
+    exit
 }
 
 try {
@@ -105,7 +105,7 @@ try {
 } catch {
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Computer not connected to dock. Exiting with scheduled task in place."
     Set-ItemProperty -Path $RegistryPath -Name $Name -Value 3
-    exit 0
+    exit
 }
 
 
@@ -121,26 +121,22 @@ if  (!$AdapterTest -eq "")
 }
 
 Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Configs in place. Disabling script schedule and updating RegItem."
-Set-ItemProperty -Path $RegistryPath -Name $Name -Value 4
 
 
 
-# All checks passed, writing the RegItem. If that succeeds, deleting script schedule.
+# All checks passed, updating the RegItem. If that succeeds, deleting script schedule.
 try {
-    New-Item -Path $RegistryPath
-    New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType DWORD
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Registry path entry updated. Disabling script schedule."           
     Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false
     Get-ChildItem $ScriptLocation -Recurse | Remove-Item
     Remove-Item $ScriptLocation
     Set-ItemProperty -Path $RegistryPath -Name $Name -Value 4 -ErrorAction SilentlyContinue
-    exit 0
+    exit
 
 } catch {
 
 # Unable to create the RegItem, leaving schedule intact.
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Error -Message "User: $env:USERNAME -- Registry path entry update failed. Leaving script schedule intact. Exiting with error." 
-    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 2 -ErrorAction SilentlyContinue
     exit 1
 }
 
