@@ -1,4 +1,4 @@
-# Version 4.8
+# Version 4.9
 # This script is designed to check if the energy efficiency related settings are enabled on a PC.
 # First it checks for a RegEdit entry used to determine if the script has run.
 # Then it check if the settings are available to manipulate.
