@@ -28,7 +28,7 @@ If ( ( (Get-ItemProperty -Path $RegistryPath -Name -$Name -ErrorAction SilentlyC
     Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false
     Get-ChildItem $ScriptLocation -Recurse | Remove-Item
     Remove-Item $ScriptLocation
-    exit
+    exit 0
 } 
 
 
@@ -97,7 +97,7 @@ if ( Get-NetAdapterAdvancedProperty -DisplayName $AdapterList ) {
 } else {
     Set-ItemProperty -Path $RegistryPath -Name $Name -Value 1 -ErrorAction SilentlyContinue
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Warning -Message "User: $env:USERNAME -- Dock not plugged in, exiting script until next scheduled run."
-    exit
+    exit 0
 }
 
 try {
@@ -105,7 +105,7 @@ try {
 } catch {
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Computer not connected to dock. Exiting with scheduled task in place."
     Set-ItemProperty -Path $RegistryPath -Name $Name -Value 3
-    exit
+    exit 0
 }
 
 
@@ -131,7 +131,7 @@ try {
     Get-ChildItem $ScriptLocation -Recurse | Remove-Item
     Remove-Item $ScriptLocation
     Set-ItemProperty -Path $RegistryPath -Name $Name -Value 4 -ErrorAction SilentlyContinue
-    exit
+    exit 0
 
 } catch {
 
