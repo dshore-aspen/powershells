@@ -16,7 +16,6 @@ $RegistryPath = 'HKCU:\Environment\GreenEthernetStatus\'
 $Name = 'Status'
 $Value = '0'
 $ScriptVersion = '4.10'
-$LogUser = 'system'
 
 # Setup event logging
 if ( !(Get-EventLog -LogName Application -Source "GreenEthernetScript") ){
@@ -24,7 +23,7 @@ if ( !(Get-EventLog -LogName Application -Source "GreenEthernetScript") ){
     Write-EventLog -LogName Application -Source "GreenEthernetScript" -EntryType Information -EventId 1 -Message "User: $env:USERNAME -- Log source created" -ErrorAction SilentlyContinue
 }
 
-Write-EventLog -LogName Application -Source "GreenEthernetScript" -EntryType Information -EventId 1 -Message "User: $env:USERNAME -- Script version $ScriptVersion. " -ErrorAction SilentlyContinue
+Write-EventLog -LogName Application -Source "GreenEthernetScript" -EntryType Information -EventId 1 -Message "User: $env:USERNAME -- Script version $ScriptVersion." -ErrorAction SilentlyContinue
 
 
 # Check if the RegItem is already set to 4 (complete). If yes=exit and delete schedule, if no=continue
@@ -45,6 +44,8 @@ try {
 try {
     # Create the Property.
     New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType DWORD -ErrorAction SilentlyContinue
+    New-ItemProperty -Path $RegistryPath -Name 'Script Version' -Value $ScriptVersion -PropertyType DWORD -ErrorAction SilentlyContinue
+
 } catch {
     # If it already exists, simply update it.
     Set-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -ErrorAction SilentlyContinue
