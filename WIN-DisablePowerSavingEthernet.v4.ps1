@@ -1,4 +1,4 @@
-# Version 4.10
+# Version 4.12
 # This script is designed to check if the energy efficiency related settings are enabled on a PC.
 # First it checks for a RegEdit entry used to determine if the script has run.
 # Then it check if the settings are available to manipulate.
@@ -12,10 +12,10 @@
 # 4 = The RealTEK drivers have been detected, and the drivers were updated. Work is complete and the script can self-destruct.
 
 # Variables for the RegItem check
-$RegistryPath = 'HKCU:\Environment\GreenEthernetStatus\'
+$RegistryPath = 'HKLM:\SYSTEM\GreenEthernetStatus\'
 $Name = 'Status'
 $Value = '0'
-$ScriptVersion = '4.10'
+$ScriptVersion = '4.12'
 
 # Setup event logging
 if ( !(Get-EventLog -LogName Application -Source "GreenEthernetScript") ){
@@ -25,15 +25,25 @@ if ( !(Get-EventLog -LogName Application -Source "GreenEthernetScript") ){
 
 Write-EventLog -LogName Application -Source "GreenEthernetScript" -EntryType Information -EventId 1 -Message "User: $env:USERNAME -- Script version $ScriptVersion." -ErrorAction SilentlyContinue
 
+# Grab what the RegItem is set to, and report that if possible.
+try {
+    $Value = Get-ItemProperty -Path $RegistryPath -Name $Name
+}
+catch {
+    Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Error -Message "User: $env:USERNAME -- Could not grab RegItem status value. May not exist yet."
+}
 
 # Check if the RegItem is already set to 4 (complete). If yes=exit and delete schedule, if no=continue
-If ( ( (Get-ItemProperty -Path $RegistryPath -Name -$Name -ErrorAction SilentlyContinue) -gt 3 )) {
+If ( ( $Value.Status -eq 4 )) {
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- RegItem found. Configuration already complete. Disabling script scheduler."
     Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false
     Get-ChildItem $ScriptLocation -Recurse | Remove-Item
     Remove-Item $ScriptLocation
     exit 0
-} 
+} else { 
+    $status = $Value.Status
+    Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- RegItem found. Value: $status"
+}
 
 
 # Create RegItem to begin tracking status of script. Any value greater than 1 reports success to Intune.
@@ -44,7 +54,7 @@ try {
 try {
     # Create the Property.
     New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType DWORD -ErrorAction SilentlyContinue
-    New-ItemProperty -Path $RegistryPath -Name 'Script Version' -Value $ScriptVersion -PropertyType DWORD -ErrorAction SilentlyContinue
+    New-ItemProperty -Path $RegistryPath -Name 'Script Version' -Value $ScriptVersion -PropertyType String -ErrorAction SilentlyContinue
 
 } catch {
     # If it already exists, simply update it.
