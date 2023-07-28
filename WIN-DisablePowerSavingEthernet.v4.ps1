@@ -1,4 +1,4 @@
-# Version 4.9
+# Version 4.10
 # This script is designed to check if the energy efficiency related settings are enabled on a PC.
 # First it checks for a RegEdit entry used to determine if the script has run.
 # Then it check if the settings are available to manipulate.
@@ -15,12 +15,17 @@
 $RegistryPath = 'HKCU:\Environment\GreenEthernetStatus\'
 $Name = 'Status'
 $Value = '0'
+$ScriptVersion = '4.10'
+$LogUser = 'system'
 
 # Setup event logging
 if ( !(Get-EventLog -LogName Application -Source "GreenEthernetScript") ){
     New-EventLog -LogName Application -Source "GreenEthernetScript"
     Write-EventLog -LogName Application -Source "GreenEthernetScript" -EntryType Information -EventId 1 -Message "User: $env:USERNAME -- Log source created" -ErrorAction SilentlyContinue
 }
+
+Write-EventLog -LogName Application -Source "GreenEthernetScript" -EntryType Information -EventId 1 -Message "User: $env:USERNAME -- Script version $ScriptVersion. " -ErrorAction SilentlyContinue
+
 
 # Check if the RegItem is already set to 4 (complete). If yes=exit and delete schedule, if no=continue
 If ( ( (Get-ItemProperty -Path $RegistryPath -Name -$Name -ErrorAction SilentlyContinue) -gt 3 )) {
@@ -127,9 +132,9 @@ Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -
 # All checks passed, updating the RegItem. If that succeeds, deleting script schedule.
 try {
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Registry path entry updated. Disabling script schedule."           
-    Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false
-    Get-ChildItem $ScriptLocation -Recurse | Remove-Item
-    Remove-Item $ScriptLocation
+    Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false -ErrorAction SilentlyContinue
+    Get-ChildItem $ScriptLocation -Recurse | Remove-Item -ErrorAction SilentlyContinue
+    Remove-Item $ScriptLocation -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $RegistryPath -Name $Name -Value 4 -ErrorAction SilentlyContinue
     exit 0
 
@@ -140,4 +145,6 @@ try {
     exit 1
 }
 
-Remove-Item $MyInvocation.MyCommand.Path -ErrorAction SilentlyContinue
+# If you've reached this line, one of the checks/trys failed and the script ran to the end. 
+Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Error -Message "User: $env:USERNAME -- Reached end of the script without exiting. Review logs to see the last activity and determine if there is actually an error." 
+exit 1
