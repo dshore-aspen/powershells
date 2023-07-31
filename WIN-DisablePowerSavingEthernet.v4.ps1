@@ -1,4 +1,4 @@
-# Version 4.12
+# Version 4.13
 # This script is designed to check if the energy efficiency related settings are enabled on a PC.
 # First it checks for a RegEdit entry used to determine if the script has run.
 # Then it check if the settings are available to manipulate.
@@ -12,10 +12,12 @@
 # 4 = The RealTEK drivers have been detected, and the drivers were updated. Work is complete and the script can self-destruct.
 
 # Variables for the RegItem check
-$RegistryPath = 'HKLM:\SYSTEM\GreenEthernetStatus\'
+# $RegistryPath = 'HKCU:\Environment\GreenEthernet\'
+$RegistryPath = 'HKLM:\SYSTEM\GreenEthernet\'
 $Name = 'Status'
 $Value = '0'
-$ScriptVersion = '4.12'
+$ScriptVersion = '4.13'
+$Error[0] = ""
 
 # Setup event logging
 if ( !(Get-EventLog -LogName Application -Source "GreenEthernetScript") ){
@@ -30,6 +32,7 @@ try {
     $Value = Get-ItemProperty -Path $RegistryPath -Name $Name
 }
 catch {
+    Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 34 -EntryType Error -Message $Error[0]
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Error -Message "User: $env:USERNAME -- Could not grab RegItem status value. May not exist yet."
 }
 
@@ -49,27 +52,36 @@ If ( ( $Value.Status -eq 4 )) {
 # Create RegItem to begin tracking status of script. Any value greater than 1 reports success to Intune.
 try {
     # Create the RegItem
-    New-Item -Path $RegistryPath -ErrorAction SilentlyContinue
-} catch {}
+    New-Item -Path $RegistryPath -ErrorAction Inquire
+} catch {
+    Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Error -Message $Error[0]
+}
 try {
     # Create the Property.
-    New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType DWORD -ErrorAction SilentlyContinue
-    New-ItemProperty -Path $RegistryPath -Name 'Script Version' -Value $ScriptVersion -PropertyType String -ErrorAction SilentlyContinue
+    New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType DWORD -ErrorAction Inquire
+    New-ItemProperty -Path $RegistryPath -Name 'Script Version' -Value $ScriptVersion -PropertyType String -ErrorAction Inquire
 
 } catch {
     # If it already exists, simply update it.
-    Set-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -ErrorAction Inquire
 }
 
 
-
+# Check if the script is already present. If it is, delete it.
+If ( Test-Path "C:\GreenEthernetScript\GreenEthernetScript.ps1" -PathType Any) {
+    Get-ChildItem $ScriptLocation -Recurse | Remove-Item -ErrorAction Inquire
+    Remove-Item $ScriptLocation -ErrorAction Inquire
+    Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Script was already present. Deleted it."
+} else {
+    Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Script was not already present. Attempting to copy next."
+}
  
 
 # Copy the script to C: for the TaskScheduler and easy access
 $ScriptLocation = $MyInvocation.MyCommand.Path
 Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Script location: $ScriptLocation" 
-New-Item -Path "C:\GreenEthernetScript" -ItemType Directory -ErrorAction SilentlyContinue
-Copy-Item -Path $ScriptLocation -Destination "C:\GreenEthernetScript\GreenEthernetScript.ps1" -ErrorAction SilentlyContinue
+New-Item -Path "C:\GreenEthernetScript" -ItemType Directory -ErrorAction Inquire
+Copy-Item -Path $ScriptLocation -Destination "C:\GreenEthernetScript\GreenEthernetScript.ps1" -ErrorAction Inquire
 $ScriptLocation = "C:\GreenEthernetScript\"
  
 # Check if the script is present
@@ -77,6 +89,7 @@ If ( Test-Path "C:\GreenEthernetScript\GreenEthernetScript.ps1" -PathType Any) {
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Script copied successfully"
     Set-ItemProperty -Path $RegistryPath -Name $Name -Value 1
 } else {
+    Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 88 -EntryType Error -Message $Error[0]
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Error -Message "User: $env:USERNAME -- Script was not copied successfully. Exiting with error to try again from start."
     exit 1
 }
@@ -95,10 +108,11 @@ Register-ScheduledTask UpdateGreenEthernet01 -InputObject $ST -User system -Erro
 
 If ( Get-ScheduledTask -TaskName UpdateGreenEthernet01 ) {
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Task scheduled successfully"
-    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 2 -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 2 -ErrorAction Inquire
 } else {
+    Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 109 -EntryType Error -Message $Error[0]
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Error -Message "User: $env:USERNAME -- Task not scheduled successfully"
-    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 1 -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 1 -ErrorAction Inquire
     exit 1
 }
 
@@ -108,10 +122,10 @@ $AdapterList = "Energy-Efficient Ethernet","Green Ethernet","Idle Power Saving"
 
 # Check if the dock is plugged in. If yes=update settings. If no=exit with schedule in place.
 if ( Get-NetAdapterAdvancedProperty -DisplayName $AdapterList ) {
-    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 3 -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 3 -ErrorAction Inquire
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Dock plugged in, proceeding with checks."
 } else {
-    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 1 -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 1 -ErrorAction Inquire
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Warning -Message "User: $env:USERNAME -- Dock not plugged in, exiting script until next scheduled run."
     exit 0
 }
@@ -129,8 +143,9 @@ try {
 if  (!$AdapterTest -eq "")
 {
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- At least one setting not configured, updating now"
-    Set-NetAdapterAdvancedProperty -DisplayName $AdapterList -DisplayValue "Disabled" -ErrorAction SilentlyContinue
+    Set-NetAdapterAdvancedProperty -DisplayName $AdapterList -DisplayValue "Disabled" -ErrorAction Inquire
     if ((Get-NetAdapterAdvancedProperty -DisplayName $AdapterList | Where-Object -FilterScript { $_.DisplayValue -eq "Enabled" })::IsNullOrEmpty){
+    Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Error -Message $Error[0]
         Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Error -Message "User: $env:USERNAME -- Setting update did not work. Exiting script with error and will try again next time."
         exit 1
     }
@@ -143,19 +158,22 @@ Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -
 # All checks passed, updating the RegItem. If that succeeds, deleting script schedule.
 try {
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Information -Message "User: $env:USERNAME -- Registry path entry updated. Disabling script schedule."           
-    Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false -ErrorAction SilentlyContinue
-    Get-ChildItem $ScriptLocation -Recurse | Remove-Item -ErrorAction SilentlyContinue
-    Remove-Item $ScriptLocation -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 4 -ErrorAction SilentlyContinue
+    Unregister-ScheduledTask -TaskName UpdateGreenEthernet01 -Confirm:$false -ErrorAction Inquire
+    Get-ChildItem $ScriptLocation -Recurse | Remove-Item -ErrorAction Inquire
+    Remove-Item $ScriptLocation -ErrorAction Inquire
+    Set-ItemProperty -Path $RegistryPath -Name $Name -Value 4 -ErrorAction Inquire
+    Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 165 -EntryType SuccessAudit -Message "User: $env:USERNAME -- Successfully completed. Would have exited now (won't for troubleshooting)"
     exit 0
 
 } catch {
 
 # Unable to create the RegItem, leaving schedule intact.
+    Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 171 -EntryType Error -Message $Error[0]
     Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Error -Message "User: $env:USERNAME -- Registry path entry update failed. Leaving script schedule intact. Exiting with error." 
     exit 1
 }
 
 # If you've reached this line, one of the checks/trys failed and the script ran to the end. 
+Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 177 -EntryType Error -Message $Error[0]
 Write-EventLog -LogName "Application" -Source "GreenEthernetScript" -EventID 1 -EntryType Error -Message "User: $env:USERNAME -- Reached end of the script without exiting. Review logs to see the last activity and determine if there is actually an error." 
 exit 1
