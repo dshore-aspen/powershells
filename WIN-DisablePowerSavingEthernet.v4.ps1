@@ -17,7 +17,7 @@ $RegistryPath = 'HKLM:\SYSTEM\GreenEthernet\'
 $Name = 'Status'
 $Value = '0'
 $ScriptVersion = '4.13'
-$Error[0] = ""
+
 
 # Setup event logging
 if ( !(Get-EventLog -LogName Application -Source "GreenEthernetScript") ){
